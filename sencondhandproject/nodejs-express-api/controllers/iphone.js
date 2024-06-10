@@ -9,6 +9,46 @@ import { Sequelize } from '../models/basemodel.js';
 const router = Router();
 
 
+router.get('/get', async (req, res) => {
+	try {
+		console.log('query:', req.params);
+		console.log('query:', req.query);
+		console.log('query:', req.body);
+		const { search, page = 1, limit = 10 } = req.query;
+		// 使用正则表达式去除所有空格
+		const trimmedSearch = search ? search.replace(/\s+/g, '') : null;
+		console.log('Original search:', search);
+		console.log('Trimmed search:', trimmedSearch, 'Page:', page, 'Limit:', limit);
+		const where = {};
+
+		if (trimmedSearch) {
+			const searchFields = DB.Iphone.searchFields();
+			where[Sequelize.Op.or] = searchFields.map(field => ({
+				[field]: { [Sequelize.Op.like]: `%${trimmedSearch}%` }
+			}));
+		}
+
+		const options = {
+			where: where,
+			attributes: DB.Iphone.listFields(),
+			order: [['id', 'ASC']],
+			limit: parseInt(limit, 10),
+			offset: (parseInt(page, 10) - 1) * parseInt(limit, 10)
+		};
+
+		const result = await DB.Iphone.findAndCountAll(options);
+
+		res.status(200).json({
+			data: result.rows,
+			totalRecords: result.count,
+			currentPage: parseInt(page, 10),
+			totalPages: Math.ceil(result.count / parseInt(limit, 10))
+		});
+	} catch (err) {
+		console.error("Error while searching Android records:", err);
+		res.status(500).json({ message: 'Internal server error' });
+	}
+});
 
 
 /**
@@ -193,6 +233,9 @@ router.post('/brands', async (req, res) => {
 			attributes: [
 				[Sequelize.fn('DISTINCT', Sequelize.col('brand')), 'brand']
 			],
+			where: {
+				issold: 0 // 只选择未售出的品牌
+			},
 			order: [
 				['brand', 'ASC'] // 根据品牌名称进行排序
 			],
@@ -298,4 +341,33 @@ router.get('/delete/:recid', async (req, res) => {
 		return res.serverError(err);
 	}
 });
+
+/**
+ * Route to view Android record
+ * @POST /iphone/confirmReceipt/{id}
+ */
+
+router.post('/confirmReceipt/:id', async (req, res) => {
+	const { id } = req.params;
+	console.log('id:', id)
+	try {
+		if (id) {
+			const result = await DB.Iphone.update(
+				{ confirmedReceipt: 1 },
+				{ where: { id: id } }
+			);
+
+			if (result[0] > 0) {
+				res.status(200).send({ message: `Successfully updated confirmReceipt for ID ${id}.` });
+			} else {
+				res.status(404).send({ message: `No record found with ID ${id} or no update needed.` });
+			}
+		} else {
+			res.status(400).send({ message: 'Missing ID in the request.' });
+		}
+	} catch (error) {
+		console.error('Error during the update process:', error);
+		res.status(500).send({ message: 'Internal Server Error' });
+	}
+})
 export default router;

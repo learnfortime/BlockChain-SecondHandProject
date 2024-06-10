@@ -13,7 +13,8 @@ class Iphone extends BaseModel {
 				owner: { type: Sequelize.STRING, allowNull: false, defaultValue: Sequelize.literal('DEFAULT') },
 				transactiontime: { type: Sequelize.DATE, defaultValue: Sequelize.literal('DEFAULT') },
 				issold: { type: Sequelize.INTEGER, allowNull: false },
-				imagepath: { type: Sequelize.STRING, defaultValue: Sequelize.literal('DEFAULT') }
+				imagepath: { type: Sequelize.STRING, defaultValue: Sequelize.literal('DEFAULT') },
+				confirmedReceipt: { type: Sequelize.INTEGER, allowNull: false, defaultValue: Sequelize.literal('DEFAULT') }
 			},
 			{
 				sequelize,
@@ -31,9 +32,12 @@ class Iphone extends BaseModel {
 			'model',
 			'price',
 			'owner',
+			'imagePath',
+			'createdAt',
 			Sequelize.literal('transactionTime AS transactiontime'),
 			'issold',
-			Sequelize.literal('imagePath AS imagepath')
+			Sequelize.literal('imagePath AS imagepath'),
+			'confirmedReceipt'
 		];
 	}
 
@@ -46,7 +50,8 @@ class Iphone extends BaseModel {
 			'owner',
 			Sequelize.literal('transactionTime AS transactiontime'),
 			'issold',
-			Sequelize.literal('imagePath AS imagepath')
+			Sequelize.literal('imagePath AS imagepath'),
+			'confirmedReceipt'
 		];
 	}
 
@@ -59,18 +64,14 @@ class Iphone extends BaseModel {
 			'owner',
 			Sequelize.literal('transactionTime AS transactiontime'),
 			'issold',
-			Sequelize.literal('imagePath AS imagepath')
+			Sequelize.literal('imagePath AS imagepath'),
+			// 'confirmedReceipt'
 		];
 	}
 
 
 	static searchFields() {
-		return [
-			Sequelize.literal("id LIKE :search"),
-			Sequelize.literal("brand LIKE :search"),
-			Sequelize.literal("model LIKE :search"),
-			Sequelize.literal("owner LIKE :search"),
-		];
+		return ['brand', 'model', 'owner'];
 	}
 
 

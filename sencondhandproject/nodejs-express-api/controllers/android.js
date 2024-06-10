@@ -130,6 +130,9 @@ router.post('/brands', async (req, res) => {
 			attributes: [
 				[Sequelize.fn('DISTINCT', Sequelize.col('brand')), 'brand']
 			],
+			where: {
+				issold: 0
+			},
 			order: [
 				['brand', 'ASC'] // 根据品牌名称进行排序
 			],
@@ -348,24 +351,105 @@ router.get('/delete/:recid', async (req, res) => {
  * Route to view Android record
  * @GET /android/view/{onwer}
  */
-router.post('/view/:onwer', async (req, res) => {
+router.post('/view/:owner', async (req, res) => {
 	try {
-		const onwer = req.params.onwer || null;
-		const query = {}
-		const where = {}
-		where['owner'] = onwer;
-		query.raw = true;
-		query.where = where;
-		query.attributes = DB.Android.viewFields();
-		let record = await DB.Android.findAll(query);
-		if (!record) {
+		const owner = req.params.owner || null;
+
+		if (!owner) {
+			return res.badRequest({ message: 'Owner is required' });
+		}
+
+		const query = {
+			raw: true,
+			where: {
+				owner: owner,
+				issold: 1 // 添加条件，确保 issold 为 0
+			},
+			attributes: DB.Android.viewFields() // 假设 Android 和 iPhone 的字段一致
+		};
+
+		const androidQuery = DB.Android.findAll(query);
+		const iphoneQuery = DB.Iphone.findAll(query);
+
+		// 并行执行两个查询
+		const [androidRecords, iphoneRecords] = await Promise.all([androidQuery, iphoneQuery]);
+
+		// 合并结果
+		const records = [...androidRecords, ...iphoneRecords];
+
+		if (records.length === 0) {
 			return res.notFound();
 		}
-		return res.ok(record);
-	}
-	catch (err) {
+
+		return res.ok(records);
+	} catch (err) {
 		return res.serverError(err);
 	}
 });
 
+
+
+router.post('/selling/:owner', async (req, res) => {
+	try {
+		const owner = req.params.owner || null;
+
+		if (!owner) {
+			return res.badRequest({ message: 'Owner is required' });
+		}
+
+		const query = {
+			raw: true,
+			where: {
+				owner: owner,
+				issold: 0
+			},
+			attributes: DB.Android.viewFields()
+		};
+
+		const androidQuery = DB.Android.findAll(query);
+		const iphoneQuery = DB.Iphone.findAll(query);
+
+		const [androidRecords, iphoneRecords] = await Promise.all([androidQuery, iphoneQuery]);
+
+		const records = [...androidRecords, ...iphoneRecords];
+
+		if (records.length === 0) {
+			return res.notFound();
+		}
+
+		return res.ok(records);
+	} catch (err) {
+		return res.serverError(err);
+	}
+});
+
+
+/**
+ * Route to view Android record
+ * @POST /android/confirmReceipt/{id}
+ */
+
+router.post('/confirmReceipt/:id', async (req, res) => {
+	const { id } = req.params;
+	console.log('id:', id)
+	try {
+		if (id) {
+			const result = await DB.Android.update(
+				{ confirmedReceipt: 1 },
+				{ where: { id: id } }
+			);
+
+			if (result[0] > 0) {
+				res.status(200).send({ message: `Successfully updated confirmReceipt for ID ${id}.` });
+			} else {
+				res.status(404).send({ message: `No record found with ID ${id} or no update needed.` });
+			}
+		} else {
+			res.status(400).send({ message: 'Missing ID in the request.' });
+		}
+	} catch (error) {
+		console.error('Error during the update process:', error);
+		res.status(500).send({ message: 'Internal Server Error' });
+	}
+});
 export default router;

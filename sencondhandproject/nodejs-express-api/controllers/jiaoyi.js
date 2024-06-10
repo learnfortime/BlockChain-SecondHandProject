@@ -10,6 +10,7 @@ import TransactionAbi from '../../../src/abi/TransactionAbi.json'  assert { type
 import deployedAddresses from '../../../src/deployedAddresses.json'  assert { type: 'json' };
 import dotenv from "dotenv";
 import Web3 from 'web3';
+import { ethers } from 'ethers';
 dotenv.config();
 
 const web3 = new Web3(process.env.SPEOLIA_URL);
@@ -19,142 +20,181 @@ const TransactionContract = new web3.eth.Contract(TransactionAbi, contractAddres
 const router = express.Router();
 
 router.post('/android', async (req, res) => {
-    const { price, buyerAddress, owner, androidId, brand, model } = req.body;
-    console.log('process.env.RPC_URL:', process.env.RPC_URL);
+    const { price, buyerAddress, owner, androidId, brand, model, signature, meteMaskAddress } = req.body;
+    console.log('req.body:', req.body);
     const transaction = await sequelize.transaction();
 
-    try {
+    const message = JSON.stringify({
+        price: price,
+        owner: owner,
+        androidId: androidId,
+        brand: brand,
+        model: model,
+        buyerAddress: buyerAddress
+    })
 
-        if (buyerAddress === owner) {
-            return res.status(405).json({ message: "不能购买自己的商品,请看看别的~" });
+    console.log('message,signature,meteMaskAddress:', message, signature, meteMaskAddress)
+
+    //签名验证
+    const signerAddress = ethers.utils.verifyMessage(message, signature);
+    console.log('signerAddress:', signerAddress)
+    if (signerAddress.toLowerCase() === meteMaskAddress.toLowerCase()) {
+        try {
+
+            if (buyerAddress === owner) {
+                return res.status(405).json({ message: "不能购买自己的商品,请看看别的~" });
+            }
+
+            const buyer = await User.findOne({ where: { address: buyerAddress } });
+            const seller = await User.findOne({ where: { address: owner } });
+
+            if (!buyer || !seller) {
+                return res.status(405).json({ message: "Buyer or seller not found." });
+            }
+
+            const transactionPrice = parseFloat(price);
+            if (isNaN(transactionPrice)) {
+                return res.status(400).json({ message: "无效的price格式化" });
+            }
+
+            const buyerToken = parseFloat(buyer.token);
+            const sellerToken = parseFloat(seller.token);
+            if (isNaN(buyerToken) || buyerToken < transactionPrice) {
+                return res.status(400).json({ message: "Buyer does not have enough funds." });
+            }
+
+            const android = await Android.findOne({ where: { id: androidId, issold: 0 } });
+            if (!android) {
+                return res.status(405).json({ message: "Android not found or already sold." });
+            }
+
+            const blockchainData = {
+                deviceId: android.id,
+                deviceType: 'android',
+                brand,
+                model,
+                buyerId: buyer.id,
+                sellerId: seller.id,
+                transactionAmount: web3.utils.toWei(transactionPrice.toString(), 'ether'),
+                transactionTime: new Date()
+            };
+
+
+            const txHash = await sendToBlockchain(blockchainData);
+
+            if (txHash) {
+                buyer.token = (buyerToken - transactionPrice).toFixed(2);
+                seller.token = (sellerToken + transactionPrice).toFixed(2);
+                android.issold = 1;
+                android.owner = buyerAddress;
+
+                await buyer.save({ transaction });
+                await seller.save({ transaction });
+                await android.save({ transaction });
+
+                await transaction.commit();
+
+            } else {
+                return res.status(405).json({ message: "Transaction failed,txHash is null" })
+            }
+            res.status(200).json({ message: "Transaction successful", txHash: txHash });
+        } catch (error) {
+            await transaction.rollback();
+            res.status(500).json({ message: "Transaction failed.", error: error.message });
         }
-
-        const buyer = await User.findOne({ where: { address: buyerAddress } });
-        const seller = await User.findOne({ where: { address: owner } });
-
-        if (!buyer || !seller) {
-            return res.status(405).json({ message: "Buyer or seller not found." });
-        }
-
-        const transactionPrice = parseFloat(price);
-        if (isNaN(transactionPrice)) {
-            return res.status(400).json({ message: "无效的price格式化" });
-        }
-
-        const buyerToken = parseFloat(buyer.token);
-        const sellerToken = parseFloat(seller.token);
-        if (isNaN(buyerToken) || buyerToken < transactionPrice) {
-            return res.status(400).json({ message: "Buyer does not have enough funds." });
-        }
-
-        const android = await Android.findOne({ where: { id: androidId, issold: 0 } });
-        if (!android) {
-            return res.status(405).json({ message: "Android not found or already sold." });
-        }
-
-        const blockchainData = {
-            deviceId: android.id,
-            deviceType: 'android',
-            brand,
-            model,
-            buyerId: buyer.id,
-            sellerId: seller.id,
-            transactionAmount: web3.utils.toWei(transactionPrice.toString(), 'ether'),
-            transactionTime: new Date()
-        };
-
-
-        const txHash = await sendToBlockchain(blockchainData);
-
-        if (txHash) {
-            buyer.token = (buyerToken - transactionPrice).toFixed(2);
-            seller.token = (sellerToken + transactionPrice).toFixed(2);
-            android.issold = 1;
-            android.owner = buyerAddress;
-
-            await buyer.save({ transaction });
-            await seller.save({ transaction });
-            await android.save({ transaction });
-
-            await transaction.commit();
-
-        } else {
-            return res.status(405).json({ message: "Transaction failed,txHash is null" })
-        }
-        res.status(200).json({ message: "Transaction successful", txHash: txHash });
-    } catch (error) {
-        await transaction.rollback();
-        res.status(500).json({ message: "Transaction failed.", error: error.message });
     }
 });
 
 
 router.post('/iphone', async (req, res) => {
-    const { price, buyerAddress, owner, iphoneId, brand, model } = req.body;  // 接收 brand 和 model
+    const { price, buyerAddress, owner, iphoneId, brand, model, signature, meteMaskAddress } = req.body;  // 接收 brand 和 model
     console.log('req.body:', req.body);
-    const transaction = await sequelize.transaction();
+    const message = JSON.stringify({
+        price: price,
+        owner: owner,
+        iphoneId: iphoneId,
+        brand: brand,
+        model: model,
+        buyerAddress: buyerAddress
+    })
 
-    try {
-        if (buyerAddress === owner) {
-            return res.status(405).json({ message: "不能购买自己的商品,请看看别的~" });
+    console.log('message,signature,meteMaskAddress:', message, signature, meteMaskAddress)
+    //签名验证
+    const signerAddress = ethers.utils.verifyMessage(message, signature);
+    console.log('signerAddress:', signerAddress)
+    if (signerAddress.toLowerCase() === meteMaskAddress.toLowerCase()) {
+        //数据库序列化操作
+        const transaction = await sequelize.transaction();
+
+        try {
+            if (buyerAddress === owner) {
+                return res.status(405).json({ message: "不能购买自己的商品,请看看别的~" });
+            }
+
+            const buyer = await User.findOne({ where: { address: buyerAddress } });
+            const seller = await User.findOne({ where: { address: owner } });
+
+            if (!buyer || !seller) {
+                return res.status(405).json({ message: "Buyer or seller not found." });
+            }
+
+            const transactionPrice = parseFloat(price);
+            if (isNaN(transactionPrice)) {
+                return res.status(400).json({ message: "无效的price格式化" });
+            }
+
+            const buyerToken = parseFloat(buyer.token);
+            const sellerToken = parseFloat(seller.token);
+            if (isNaN(buyerToken) || buyerToken < transactionPrice) {
+                return res.status(400).json({ message: "Buyer does not have enough funds." });
+            }
+
+            const iphone = await iPhone.findOne({ where: { id: iphoneId, issold: 0 } });
+            if (!iphone) {
+                return res.status(405).json({ message: "iPhone not found or already sold." });
+            }
+
+            const blockchainData = {
+                deviceId: iphone.id,  // 使用 deviceId 替代 iphoneId，为了通用性
+                deviceType: 'iphone',
+                brand,  // 将 brand 传递给区块链
+                model,  // 将 model 传递给区块链
+                buyerId: buyer.id,
+                sellerId: seller.id,
+                transactionAmount: web3.utils.toWei(transactionPrice.toString(), 'ether'),
+                transactionTime: new Date(),
+            };
+
+            console.log('blockchainData:', blockchainData);
+            const txHash = await sendToBlockchain(blockchainData, 'iphone');  // 传递 deviceType 为 'iphone'
+
+            if (txHash) {
+                buyer.token = (buyerToken - transactionPrice).toFixed(2);
+                seller.token = (sellerToken + transactionPrice).toFixed(2);
+                iphone.issold = 1;
+                iphone.owner = buyerAddress;
+
+                await buyer.save({ transaction });
+                await seller.save({ transaction });
+                await iphone.save({ transaction });
+
+                await transaction.commit();
+            } else {
+                return res.status(405).json({ message: "Transaction failed,txHash is null" })
+            }
+            res.status(200).json({ message: "Transaction successful", txHash: txHash });
+        } catch (error) {
+            await transaction.rollback();
+            res.status(500).json({ message: "Transaction failed.", error: error.message });
         }
-
-        const buyer = await User.findOne({ where: { address: buyerAddress } });
-        const seller = await User.findOne({ where: { address: owner } });
-
-        if (!buyer || !seller) {
-            return res.status(405).json({ message: "Buyer or seller not found." });
-        }
-
-        const transactionPrice = parseFloat(price);
-        if (isNaN(transactionPrice)) {
-            return res.status(400).json({ message: "无效的price格式化" });
-        }
-
-        const buyerToken = parseFloat(buyer.token);
-        const sellerToken = parseFloat(seller.token);
-        if (isNaN(buyerToken) || buyerToken < transactionPrice) {
-            return res.status(400).json({ message: "Buyer does not have enough funds." });
-        }
-
-        const iphone = await iPhone.findOne({ where: { id: iphoneId, issold: 0 } });
-        if (!iphone) {
-            return res.status(405).json({ message: "iPhone not found or already sold." });
-        }
-
-        const blockchainData = {
-            deviceId: iphone.id,  // 使用 deviceId 替代 iphoneId，为了通用性
-            deviceType: 'iphone',
-            brand,  // 将 brand 传递给区块链
-            model,  // 将 model 传递给区块链
-            buyerId: buyer.id,
-            sellerId: seller.id,
-            transactionAmount: web3.utils.toWei(transactionPrice.toString(), 'ether'),
-            transactionTime: new Date()
-        };
-
-        console.log('blockchainData:', blockchainData);
-        const txHash = await sendToBlockchain(blockchainData, 'iphone');  // 传递 deviceType 为 'iphone'
-
-        if (txHash) {
-            buyer.token = (buyerToken - transactionPrice).toFixed(2);
-            seller.token = (sellerToken + transactionPrice).toFixed(2);
-            iphone.issold = 1;
-            iphone.owner = buyerAddress;
-
-            await buyer.save({ transaction });
-            await seller.save({ transaction });
-            await iphone.save({ transaction });
-
-            await transaction.commit();
-        } else {
-            return res.status(405).json({ message: "Transaction failed,txHash is null" })
-        }
-        res.status(200).json({ message: "Transaction successful", txHash: txHash });
-    } catch (error) {
-        await transaction.rollback();
-        res.status(500).json({ message: "Transaction failed.", error: error.message });
+    } else {
+        res.send({ verified: false, error: 'Signature does not match expected address' });
+        return
     }
+
+
+
+
 });
 
 router.get('/transactions', async (req, res) => {

@@ -9,8 +9,8 @@ const footerHeight = 64;
 const headerHeight = 64;
 const MainLayout = () => {
     return (
-        <Layout style={{ minHeight: '100vh', color: '#fff' }}> {/* This ensures that the layout fills the viewport height */}
-            <Header style={{ position: 'fixed', width: '100%', top: 0, color: '#fff' }}>
+        <Layout style={{ minHeight: '100vh', color: '#fff' }}> { }
+            <Header style={{ position: 'fixed', width: '100%', top: 0, color: '#fff', backgroundColor: '#fff' }}>
                 <HeaderAdmin />
             </Header>
             <Layout style={{ paddingTop: 64, marginLeft: 200 }}> {/* Offset for the fixed Header and Sider */}

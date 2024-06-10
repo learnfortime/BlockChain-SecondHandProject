@@ -28,8 +28,6 @@ const UserLayout = () => {
                 const response = await api.get('/api/account'); // 发起请求
                 if (response.status === 200) {
                     const accountData = response.data;
-                    // 从响应数据中获取所需信息
-                    // console.log('11', accountData.photo)
                     setUser({
                         name: accountData.email,
                         avatar: `/assets/images${accountData.photo}`, // 更新头像路径
@@ -94,7 +92,11 @@ const UserLayout = () => {
         }
     }
     const handleSellClick = async () => {
-        console.log('正在售卖....')
+        try {
+            navigate('/user/selling'); // Navigate to /person page
+        } catch (error) {
+            console.error('Error fetching account data:', error);
+        }
     }
     // 用户下拉菜单
     const menu = (
@@ -133,9 +135,9 @@ const UserLayout = () => {
 
     // 导航菜单项
     const navItems = [
-        { key: 'home', label: <Link to="/user/home">Home</Link> },
-        { key: 'phone', label: <Link to="/user/android">Phone</Link> },
-        { key: 'selling', label: <Link to='/user/selling'>selling</Link> }
+        { key: 'home', label: <Link to="/user/home">主页面</Link> },
+        { key: 'phone', label: <Link to="/user/android">二手市场</Link> },
+        { key: 'selling', label: <Link to='/user/sellPhone'>售卖</Link> }
     ];
 
     const breadcrumbItems = pathSnippets.map((snippet, index) => {

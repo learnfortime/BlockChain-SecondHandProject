@@ -34,7 +34,7 @@ const TokenModal = ({ visible, onClose, onTokenChange, initialTokens, selectedUs
 
     return (
         <Modal
-            title="Adjust Token Balance"
+            title="增加或减少token"
             visible={visible}
             onOk={handleSubmit}
             onCancel={onClose}
@@ -48,7 +48,7 @@ const TokenModal = ({ visible, onClose, onTokenChange, initialTokens, selectedUs
             ]}
         >
             <Form layout="vertical">
-                <Form.Item label="Token Amount">
+                <Form.Item label="Token数量">
                     <InputNumber
                         min={-10000}
                         value={tokens}

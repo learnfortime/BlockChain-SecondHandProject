@@ -15,7 +15,9 @@ import UserLayout from './layout/UserLayout/UserLayout'
 import Phone from './views/Android/UserView'
 import Communcation from './views/Communcation/ChatUI'
 import Possessed from './views/Persion/Possessed'
-import Selling from './views/Helper/Selling'
+import SellPhone from './views/Helper/SellPhone'
+import IphoneList from './views/IPhone/List'
+import Selling from './views/Persion/Selling'
 import BlockchainExplorer from './views/Blockchain-explorer/Blockchain-explorer-ui'
 
 const isAuthenticated = () => {
@@ -35,9 +37,10 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/" element={<PrivateRoute><MainLayout /></PrivateRoute>}>
           <Route index element={<UserList />} />
+          <Route path="person" element={<Person />} />
           <Route path="userList" element={<UserList />} />
           <Route path="transcations" element={<Transcations />} />
-          <Route path="iphone" element={<HomePage />} />
+          <Route path="iphone" element={<IphoneList />} />
           <Route path="android">
             <Route index element={<AndroidList />} />
             <Route path=":fieldName/:fieldValue" element={<AndroidList />} />
@@ -62,6 +65,7 @@ function App() {
           <Route path="person" element={<Person />} />
           <Route path="communcation" element={<Communcation />} />
           <Route path="possessed" element={<Possessed />} />
+          <Route path='sellPhone' element={<SellPhone />} />
           <Route path='selling' element={<Selling />} />
           <Route path='blockchain-explorer' element={<BlockchainExplorer />} />
         </Route>

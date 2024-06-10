@@ -69,38 +69,19 @@ const Home = () => {
             <Carousel autoplay>
                 {/* Image slides */}
                 <div>
+                    <video controls style={{ width: '100%', maxHeight: '450px' }}>
+                        <source src={`/asserts/videos/0f9e5bad40e9c9e5bd9b74b9b7b5f354.mp4`} type="video/mp4" />
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+                <div>
                     <img src="https://tse3-mm.cn.bing.net/th/id/OIP-C.5uS5JEtWNGieM6o-9JVWdgHaEc?w=320&h=191&c=7&r=0&o=5&dpr=1.3&pid=1.7" alt="First Slide" style={{ width: '100%', maxHeight: '450px', objectFit: 'cover' }} />
                 </div>
                 <div>
                     <img src="https://tse1-mm.cn.bing.net/th/id/OIP-C.WQUxQCOBoQEomT-eWJrSvwHaE8?w=242&h=180&c=7&r=0&o=5&dpr=1.3&pid=1.7" alt="Second Slide" style={{ width: '100%', maxHeight: '450px', objectFit: 'cover' }} />
                 </div>
                 {/* Video slide */}
-                <div>
-                    <video controls style={{ width: '100%', maxHeight: '450px' }}>
-                        <source src="https://www.bilibili.com/video/BV1jQ4y12756?t=3.4" type="video/mp4" />
-                        Your browser does not support the video tag.
-                    </video>
-                </div>
             </Carousel>
-
-            {/* Testimonials section with visible scrollbar */}
-            <div style={scrollbarStyle}>
-                <List
-                    itemLayout="horizontal"
-                    dataSource={testimonials}
-                    renderItem={item => (
-                        <List.Item style={{ width: '300px', float: 'left', padding: '10px', boxSizing: 'border-box' }}>
-                            <List.Item.Meta
-                                avatar={<Avatar src={item.avatar} />}
-                                title={item.name}
-                                description={item.testimonial}
-                            />
-                        </List.Item>
-                    )}
-                    style={{ overflow: 'auto', whiteSpace: 'nowrap', padding: '0 20px' }}
-                />
-            </div>
-
             {/* Additional content sections */}
             <Row gutter={[16, 16]} style={{ marginTop: '20px' }}>
                 <Col span={12}>
@@ -120,6 +101,24 @@ const Home = () => {
                     </Card>
                 </Col>
             </Row>
+            {/* Testimonials section with visible scrollbar */}
+            <div style={scrollbarStyle}>
+                <List
+                    itemLayout="vertical"
+                    dataSource={testimonials}
+                    renderItem={item => (
+                        <List.Item>
+                            <List.Item.Meta
+                                avatar={<Avatar src={item.avatar} />}
+                                title={item.name}
+                                description={item.testimonial}
+                            />
+                        </List.Item>
+                    )}
+                />
+            </div>
+
+
 
             <div style={{ textAlign: 'center', marginTop: '40px', padding: '20px', borderTop: '1px solid #eee' }}>
                 <Text strong>© {new Date().getFullYear()} Second-Hand Platform</Text>

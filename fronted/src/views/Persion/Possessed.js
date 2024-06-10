@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import useApi from '../../Hooks/useApi';
 import deleteIcon from '../../asserts/deleteIcon.png'; // Ensure these paths are correct
 import addIcon from '../../asserts/addIcon.png';
-
+import LoadingIndicator from '../Helper/Waiting'
 const api = new useApi();
 
 const ProductList = () => {
@@ -13,6 +13,7 @@ const ProductList = () => {
   const [editableProduct, setEditableProduct] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [image, setImage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchOwner = async () => {
@@ -30,23 +31,24 @@ const ProductList = () => {
     fetchOwner();
   }, []);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      if (!owner) return;
-
-      try {
-        const response = await api.post(`/api/android/view/${owner}`);
-        if (response.status !== 200) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        setProducts(response.data);
-      } catch (error) {
-        console.error("Fetching products failed: ", error);
+  const fetchProducts = async () => {
+    if (!owner) return;
+    try {
+      const response = await api.post(`/api/android/view/${owner}`);
+      if (response.status !== 200) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    };
+      console.log('response.data:', response.data);
+      setProducts(response.data);
+    } catch (error) {
+      console.error("Fetching products failed: ", error);
+    }
+  };
 
+  useEffect(() => {
     fetchProducts();
   }, [owner]);
+
 
   const handleDeleteImage = () => {
     setImage('');
@@ -78,6 +80,7 @@ const ProductList = () => {
       const response = await api.put(`/api/products/${editableProduct.id}`, editableProduct);
       if (response.status === 200) {
         const updatedProducts = products.map(p => p.id === editableProduct.id ? editableProduct : p);
+        console.log('updatedProducts:', updatedProducts)
         setProducts(updatedProducts);
         setSelectedProduct(editableProduct);
       } else {
@@ -93,18 +96,101 @@ const ProductList = () => {
   };
 
   const handleReturn = () => {
+    setSelectedProduct(null);
     setIsEditing(false);
+  };
+
+  //休眠时间1s
+  const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+  const handleConfirmReceipt = async (product) => {
+    // 显示确认对话框并获取用户的选择
+    const userConfirmed = window.confirm("您确定要确认收货吗？");
+
+    // 检查用户是否点击了“确认”
+    if (userConfirmed) {
+      const tryConfirmReceipt = async (url) => {
+        await sleep(1500); // 等待1秒钟
+        try {
+          const response = await api.post(url);
+          if (response.status === 200) {
+            fetchProducts(); // 重新获取产品列表以更新 UI
+            return true; // 表示成功
+          } else {
+            console.error(`Failed with status: ${response.status}`);
+            return false; // 表示失败
+          }
+        } catch (error) {
+          if (error.response) {
+            console.error('Server responded with status:', error.response.status);
+            console.error('Error message:', error.response.data);
+          } else if (error.request) {
+            console.error('No response received:', error.request);
+          } else {
+            console.error('Error setting up the request:', error.message);
+          }
+          return false; // 表示失败
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      setIsLoading(true); // 设置加载状态为true
+      try {
+        // 尝试第一个请求
+        const firstAttempt = await tryConfirmReceipt(`/api/android/confirmReceipt/${product.id}`);
+        if (!firstAttempt) {
+          // 如果第一个请求失败，尝试第二个请求
+          await tryConfirmReceipt(`/api/iphone/confirmReceipt/${product.id}`);
+        }
+      } catch (error) {
+        console.error('Unexpected error:', error);
+      } finally {
+        setIsLoading(false); // 最终清理操作，设置加载状态为false
+      }
+    } else {
+      // 用户点击了“取消”，可以在这里添加处理代码，如关闭模态框或返回
+      console.log('收货确认已取消');
+    }
+  };
+
+
+  //申请售后
+  const handleApplyAfterSales = (product) => {
+
+    const isConfirmed = window.confirm(`确认收到${product.brand} ${product.model}吗？`);
+    if (isConfirmed) {
+      // 处理确认收货的逻辑
+      console.log(`收货确认成功: ${product}`);
+      const response = api.post(`/api/android/confirmReceipt/${product.id}`)
+
+
+    }
   };
 
   return (
     <>
+      <LoadingIndicator isOpen={isLoading} message="正在确认收货..." />
       <Container>
         {products.map((product) => (
           <ItemContainer key={product.id} onClick={() => handleProductClick(product)}>
             <Content>
               <Title>{`${product.brand} ${product.model}`}</Title>
-              <Image src={`../../../public/asserts/images/${product.imagepath}`} alt={product.model} />
+              <img src={`/asserts/images/${product.imagepath}`} alt="Product" style={{ height: '200px', objectFit: 'cover' }} />
               <Price>{`$${product.price}`}</Price>
+              <div className="buttonContainer">
+                <Button className="confirmButton" onClick={(e) => {
+                  e.stopPropagation();
+                  handleConfirmReceipt(product);
+                }} disabled={product.confirmedReceipt === 1}>
+                  确认收货
+                </Button>
+                <Button className="applyAfterSalesButton" onClick={(e) => {
+                  e.stopPropagation();
+                  handleApplyAfterSales(product);
+                }} disabled={product.confirmedReceipt === 1}>
+                  申请售后
+                </Button>
+              </div>
             </Content>
           </ItemContainer>
         ))}
@@ -120,10 +206,10 @@ const ProductList = () => {
                 <Input name="brand" value={editableProduct.brand} onChange={handleChange} />
                 <Input name="model" value={editableProduct.model} onChange={handleChange} />
                 <Input name="price" value={editableProduct.price} onChange={handleChange} />
-                <ImageManagement image={image}>
+                <ImageManagement image={editableProduct.imagepath}>
                   {image && (
                     <>
-                      <img src={`/assets/images/${image}`} alt="Current" style={{ width: '100%', height: 'auto' }} />
+                      <img src={`/asserts/images/${image}`} alt="Product" style={{ height: '200px', objectFit: 'cover' }} />
                       <DeleteIcon src={deleteIcon} alt="Delete" onClick={handleDeleteImage} style={{ position: 'absolute', top: '10px', right: '10px', cursor: 'pointer' }} />
                     </>
                   )}
@@ -135,13 +221,14 @@ const ProductList = () => {
                   )}
                 </ImageManagement>
                 <ButtonRow>
-                  <Button onClick={handleConfirm}>Submit</Button>
-                  <Button onClick={handleReturn}>Return</Button>
+                  <Button onClick={handleConfirm}>提交</Button>
+                  <Button onClick={handleReturn}>返回</Button>
                 </ButtonRow>
               </EditForm>
             ) : (
               <>
-                <img src={`/assets/images/${selectedProduct.imagepath}`} alt={selectedProduct.model} style={{ width: '100%' }} />
+                <img src={`/asserts/images/${selectedProduct.imagepath}`} alt={selectedProduct.model} style={{ height: '200px', objectFit: 'cover' }} />
+                <p>Model: ${selectedProduct.model}</p>
                 <p>Price: ${selectedProduct.price}</p>
                 <p>Owner: {selectedProduct.owner}</p>
                 <Button onClick={handleEdit}>Edit</Button>
@@ -286,7 +373,15 @@ const Button = styled.button`
   &:hover {
     background-color: #0056b3;
   }
+
+  &:disabled {
+  background-color: #ccc;
+  color: #666;
+  cursor: not-allowed;
+}
 `;
+
+
 
 const ImageManagement = styled.div`
   position: relative;

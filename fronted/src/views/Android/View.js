@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import useApi from '../../Hooks/useApi';
 import './AndroidView.css';
 import Waiting from '../Helper/Waiting'
-import { fas } from '@fortawesome/free-solid-svg-icons';
+import { ethers } from 'ethers';
 
 const { Title, Text } = Typography;
 
@@ -35,52 +35,78 @@ const AndroidView = () => {
     };
 
     const handleConfirm = async () => {
+        const userData = JSON.parse(localStorage.getItem('userData'));
+        if (rowData.owner === userData.address) {
+            alert('Cannot purchase your own product');
+            return;
+        }
+
         setIsModalVisible(false);
-        setIsLoading(true);  // Set loading true before the request starts
+        setIsLoading(true);
 
-        let endpoint = '/api/transaction/android'; // Default endpoint for Android
-        let requestData = {
-            price: rowData.price,
-            owner: rowData.owner,
-            androidId: rowData.id,
-            brand: rowData.brand,
-            model: rowData.model,
-            buyerAddress: JSON.parse(localStorage.getItem('userData')).address
-        };
-
-        if (currentKey === '1') {
-            endpoint = '/api/transaction/iphone'; // Endpoint for iPhone
-            requestData = {
-                price: rowData.price,
-                owner: rowData.owner,
-                iphoneId: rowData.id,
-                brand: rowData.brand,
-                model: rowData.model,
-                buyerAddress: JSON.parse(localStorage.getItem('userData')).address
-            };
+        if (!window.ethereum) {
+            alert('Please install MetaMask to use this feature.');
+            return;
         }
 
         try {
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            await provider.send("eth_requestAccounts", []);
+            const network = await provider.getNetwork();
+
+            if (network.chainId !== 11155111) { // Sepolia's Chain ID
+                alert('Please switch to the Sepolia network in MetaMask.');
+                setIsLoading(false);
+                return;
+            }
+
+            const signer = provider.getSigner();
+            const deviceIdKey = currentKey === '1' ? 'iphoneId' : 'androidId';
+            const endpoint = `/api/transaction/${deviceIdKey === 'iphoneId' ? 'iphone' : 'android'}`;
+
+            const message = JSON.stringify({
+                price: rowData.price,
+                owner: rowData.owner,
+                [deviceIdKey]: rowData.id,
+                brand: rowData.brand,
+                model: rowData.model,
+                buyerAddress: userData.address
+            });
+
+            const signature = await signer.signMessage(message);
+            const meteMaskAddress = await signer.getAddress();
+
+            let requestData = {
+                price: rowData.price,
+                owner: rowData.owner,
+                brand: rowData.brand,
+                model: rowData.model,
+                buyerAddress: userData.address,
+                signature: signature,
+                meteMaskAddress: meteMaskAddress,
+                [deviceIdKey]: rowData.id
+            };
+
             const response = await api.post(endpoint, requestData);
             if (response.status === 200) {
                 setTransactionMessage(response.data.message);
                 setTransactionHash(response.data.txHash);
-                setIsResultModalVisible(true);
             } else {
-                const message = response.statusText || "Error with transaction";
-                setTransactionMessage(message);
+                setTransactionMessage(response.statusText || "Error with transaction");
                 setTransactionHash('');
-                setIsResultModalVisible(true);
             }
+            setIsResultModalVisible(true);
         } catch (error) {
-            console.error('Error during purchase:', error.message || "Network error");
+            console.error('Error during purchase or signing:', error);
             setTransactionMessage(error.message || "Network error");
             setTransactionHash('');
             setIsResultModalVisible(true);
         } finally {
-            setIsLoading(false);  // Reset loading state whether the request succeeds or fails
+            setIsLoading(false);
         }
     };
+
+
 
 
 
@@ -102,7 +128,7 @@ const AndroidView = () => {
         <div className="android-view">
             <div className="left-pane">
                 <Carousel autoplay>
-                    {rowData.imagepath?.split(',').map((image, index) => (
+                    {rowData.imagePath?.split(',').map((image, index) => (
                         <div key={index} className="carousel-slide">
                             <img src={`/asserts/images/${image}`} alt={`${index}`} />
                         </div>

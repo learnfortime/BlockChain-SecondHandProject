@@ -49,7 +49,7 @@ const ItemsGrid = () => {
         if (loading || !hasMore) return;
 
         setLoading(true);
-        api.get(`/api/android?page=${page}&limit=12`)
+        api.get(`/api/android`)
             .then(response => {
                 setPage(prevPage => prevPage + 1);
                 if (response.data.records.length === 0) {
@@ -59,6 +59,7 @@ const ItemsGrid = () => {
                     setAndroidItems(prevItems => {
                         const ids = new Set(prevItems.map(i => i.id));
                         const newItems = response.data.records.filter(i => !ids.has(i.id));
+
                         return [...prevItems, ...newItems];
                     });
                 }
@@ -76,7 +77,7 @@ const ItemsGrid = () => {
         if (appleLoading || !appleHasMore) return;
 
         setAppleLoading(true);
-        api.get(`/api/iphone?page=${applePage}&limit=12`)
+        api.get(`/api/iphone`)
             .then(response => {
                 setApplePage(prevPage => prevPage + 1);
                 if (response.data.records.length === 0) {
@@ -95,16 +96,13 @@ const ItemsGrid = () => {
             .finally(() => {
                 setAppleLoading(false);
             });
-    }, [applePage, appleHasMore, appleLoading, api]);
+    });
 
     useEffect(() => {
         loadAppleItems();
         loadAndroidItems();
-    }, [loadAppleItems, loadAndroidItems]);
+    }, []);
 
-    useEffect(() => {
-
-    }, [androidItems, appleItems])
     const handleClick = rowData => {
         try {
             console.log('rowData:', rowData, currentKey);
@@ -264,7 +262,7 @@ const ItemsGrid = () => {
                                     <Card
                                         hoverable
                                         style={{ width: '100%' }}
-                                        cover={<img alt={item.model} src={`/asserts/images/${item.imagepath}`} style={{ height: '200px', objectFit: 'cover' }} />}
+                                        cover={<img alt={item.model} src={`/asserts/images/${item.imagePath}`} style={{ height: '200px', objectFit: 'cover' }} />}
                                     >
                                         <Card.Meta
                                             title={`${item.brand} | ${item.model}`}

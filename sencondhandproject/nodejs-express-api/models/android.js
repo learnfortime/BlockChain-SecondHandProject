@@ -14,6 +14,8 @@ class Android extends BaseModel {
 				transactiontime: { type: Sequelize.DATE },
 				issold: { type: Sequelize.INTEGER, allowNull: false },
 				imagepath: { type: Sequelize.STRING, defaultValue: Sequelize.literal('DEFAULT') },
+				confirmedReceipt: { type: Sequelize.INTEGER, allowNull: false, defaultValue: Sequelize.literal('DEFAULT') }
+
 			},
 			{
 				sequelize,
@@ -37,7 +39,8 @@ class Android extends BaseModel {
 			'createdAt',
 			'issold',
 			// Sequelize.literal('imagePath AS imagepath'),
-			'id'
+			'id',
+			'confirmedReceipt'
 		];
 	}
 
@@ -50,7 +53,8 @@ class Android extends BaseModel {
 			'owner',
 			Sequelize.literal('transactionTime AS transactiontime'),
 			'issold',
-			Sequelize.literal('imagePath AS imagepath')
+			Sequelize.literal('imagePath AS imagepath'),
+			'confirmedReceipt'
 		];
 	}
 
@@ -62,7 +66,8 @@ class Android extends BaseModel {
 			'owner',
 			'issold',
 			Sequelize.literal('imagePath AS imagepath'),
-			'id'
+			'id',
+			'confirmedReceipt'
 		];
 	}
 
