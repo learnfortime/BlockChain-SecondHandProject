@@ -12,10 +12,12 @@ First, create a directory and clone the repository:
 ``git clone https://github.com/learnfortime/BlockChain-SecondHandProject.git  ``
 
 ``cd BlockChain-SecondHandProject  ``
+
 ### 2. Frontend Installation
 ``Navigate to the frontend directory and install the required dependencies:  ``
 
 ``cd fronted``
+
 ``npm install``
 ### 3.Start the Frontend
 You can start the frontend application with the following command:
@@ -34,6 +36,7 @@ Navigate to the backend directory, install the dependencies, and start the backe
 ``npm install``
 
 ``npm start``
+
 
 The backend server should now be running and able to communicate with the frontend.
 
