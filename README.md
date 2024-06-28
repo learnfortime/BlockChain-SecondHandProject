@@ -8,7 +8,9 @@ This project contains both frontend and backend components for a Second Hand Pro
 First, create a directory and clone the repository:
 
 ``mkdir secondhandproject && cd secondhandproject  ``
+
 ``git clone https://github.com/learnfortime/BlockChain-SecondHandProject.git  ``
+
 ``cd BlockChain-SecondHandProject  ``
 ### 2. Frontend Installation
 ``Navigate to the frontend directory and install the required dependencies:  ``
@@ -26,8 +28,11 @@ After starting, the frontend should be accessible via a web browser.
 Navigate to the backend directory, install the dependencies, and start the backend server:
 
 ``cd ..``
+
 ``cd sencondhandproject/nodejs-express-api``
+
 ``npm install``
+
 ``npm start``
 
 The backend server should now be running and able to communicate with the frontend.
