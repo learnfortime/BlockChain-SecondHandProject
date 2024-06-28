@@ -7,11 +7,11 @@ This project contains both frontend and backend components for a Second Hand Pro
 ### 1. Setup and Clone the Repository
 First, create a directory and clone the repository:
 
-``mkdir secondhandproject && cd secondhandproject\n``
-``git clone https://github.com/learnfortime/BlockChain-SecondHandProject.git\n``
-``cd BlockChain-SecondHandProject``
+``mkdir secondhandproject && cd secondhandproject  ``
+``git clone https://github.com/learnfortime/BlockChain-SecondHandProject.git  ``
+``cd BlockChain-SecondHandProject  ``
 ### 2. Frontend Installation
-``Navigate to the frontend directory and install the required dependencies:``
+``Navigate to the frontend directory and install the required dependencies:  ``
 
 ``cd fronted``
 ``npm install``
